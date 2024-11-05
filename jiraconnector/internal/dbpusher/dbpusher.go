@@ -3,28 +3,37 @@ package dbpusher
 import (
 	"database/sql"
 	"fmt"
-
+	"github.com/jiraconnector/internal/dto"
 	_ "github.com/lib/pq"
 )
 
-var (
-	host     = "127.0.0.1"
-	port     = 5432
-	user     = "postgres"
-	password = "elephant"
-	db       = "test"
-)
+type DataBase struct {
+	Db *sql.DB
+}
 
-func DbPusher(projectTitle string) {
-	dataSourceName := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, db)
-	database, err := sql.Open("postgres", dataSourceName)
+func NewDB() (*DataBase, error) {
+	conStr := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=disable",
+		"postgres",
+		"elephant",
+		"127.0.0.1",
+		5432,
+		"test",
+	)
+	db, err := sql.Open("postgres", conStr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	var projectId int
-	database.QueryRow("INSERT INTO \"projects\" (title) VALUES($1) RETURNING id", projectTitle).Scan(&projectId)
-	//database.QueryRow("SELECT id FROM \"projects\" WHERE title=$1", projectTitle).Scan(&projectId)
-	fmt.Println(projectId)
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+	return &DataBase{Db: db}, nil
+}
 
+func SaveProject(database *DataBase, project *dto.Project) (projectId int) {
+	database.Db.QueryRow("SELECT id from project WHERE title = $1", project.Title).Scan(&projectId)
+	if projectId == 0 {
+		database.Db.QueryRow("INSERT INTO project (title) VALUES($1) RETURNING id", project.Title).Scan(&projectId)
+	}
+	return projectId
 }
