@@ -46,25 +46,26 @@ func saveAuthor(database *DataBase, author *dto.Author) {
 	}
 }
 
-// TODO проверка записи на существование????
 func SaveIssue(database *DataBase, issue *entities.Issue) {
-	project := transformer.ProjectToDTO(&issue.Fields.Project)
-	creator := transformer.AuthorToDTO(&issue.Fields.Creator)
-	assignee := transformer.AuthorToDTO(&issue.Fields.Assignee)
 	issueTrans := transformer.IssueToDTO(issue)
-	saveProject(database, &project)
-	saveAuthor(database, &creator)
-	saveAuthor(database, &assignee)
-	issueTrans.ProjectId = project.ID
-	issueTrans.AuthorId = creator.ID
-	issueTrans.AssigneeId = assignee.ID
-	result, err := database.Db.Exec("INSERT INTO issue (projectid, authorid, assigneeid, key, summary, description, type,"+
-		" priority, status, createdtime, closedtime, updatetime, timespent) VALUES($1, $2, $3, $4, $5, $6, $7, $8, "+
-		"$9, $10, $11, $12, $13) RETURNING id", issueTrans.ProjectId, issueTrans.AuthorId, issueTrans.AssigneeId, issueTrans.Key,
-		issueTrans.Summary, issueTrans.Description, issueTrans.Type, issueTrans.Priority,
-		issueTrans.Status, issueTrans.CreatedTime, issueTrans.ClosedTime, issueTrans.UpdatedTime,
-		issueTrans.TimeSpent)
-	fmt.Errorf("\t", err)
-	id, err := result.LastInsertId()
-	fmt.Println(id)
+	database.Db.QueryRow("SELECT id from issue WHERE key = $1", issueTrans.Key).Scan(&issueTrans.ID)
+	if issueTrans.ID == 0 {
+		project := transformer.ProjectToDTO(&issue.Fields.Project)
+		creator := transformer.AuthorToDTO(&issue.Fields.Creator)
+		assignee := transformer.AuthorToDTO(&issue.Fields.Assignee)
+
+		saveProject(database, &project)
+		saveAuthor(database, &creator)
+		saveAuthor(database, &assignee)
+		issueTrans.ProjectId = project.ID
+		issueTrans.AuthorId = creator.ID
+		issueTrans.AssigneeId = assignee.ID
+
+		database.Db.QueryRow("INSERT INTO issue (projectid, authorid, assigneeid, key, summary, description, type,"+
+			" priority, status, createdtime, closedtime, updatedtime, timespent) VALUES($1, $2, $3, $4, $5, $6, $7, $8, "+
+			"$9, $10, $11, $12, $13) RETURNING id", issueTrans.ProjectId, issueTrans.AuthorId, issueTrans.AssigneeId, issueTrans.Key,
+			issueTrans.Summary, issueTrans.Description, issueTrans.Type, issueTrans.Priority,
+			issueTrans.Status, issueTrans.CreatedTime, issueTrans.ClosedTime, issueTrans.UpdatedTime,
+			issueTrans.TimeSpent).Scan(&issueTrans.ID)
+	}
 }
