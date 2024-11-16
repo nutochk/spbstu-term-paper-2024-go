@@ -38,3 +38,12 @@ func IssueToDTO(issue *entities.Issue) dto.Issue {
 		Type:        issue.Fields.Type.Name,
 	}
 }
+
+func StatusChandesToDTO(history *entities.History, i int) dto.StatusChanges {
+	changeTime, _ := time.Parse("2006-01-02T15:04:05.999-0700", history.ChangeTime)
+	return dto.StatusChanges{
+		ChangeTime: changeTime,
+		FromStatus: history.Items[i].FromString,
+		ToStatus:   history.Items[i].ToString,
+	}
+}
